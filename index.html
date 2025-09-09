@@ -1,154 +1,53 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <title>Vanka Escapes | 在线发票生成器</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- jsPDF & html2canvas（CDN） -->
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <meta charset="UTF-8">
+  <title>在线发票生成器（带附件&大项目行）</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
-    :root{
-      --bg:#f6f7f9; --card:#fff; --ink:#111; --muted:#6b7280; --line:#e5e7eb; --primary:#111;
+    body { font-family: Arial, sans-serif; margin: 40px; background: #fafbfc;}
+    .container { display: flex; gap: 40px; }
+    .form-area, .preview-area { padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #eee;}
+    .form-area { width: 410px;}
+    .preview-area { flex: 1;}
+    h2 { margin-top: 0; font-size: 22px;}
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px;}
+    th, td { border: 1px solid #e1e4e8; padding: 8px; vertical-align: top;}
+    button { margin: 3px 0;}
+    #attachmentList li { margin-bottom: 5px;}
+    #attachment-preview img { height: 80px; margin-right: 8px; margin-bottom: 8px;}
+    .actions { margin-top: 22px;}
+    .desc {
+      font-size: 15px;
+      min-height: 60px;
+      resize: vertical;
+      width: 98%;
+      box-sizing: border-box;
     }
-    *{box-sizing:border-box}
-    body{
-      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-      background:var(--bg); color:var(--ink); line-height:1.45;
-    }
-    header{padding:24px}
-    .wrap{max-width:1100px;margin:0 auto;padding:0 16px 64px}
-    .grid{display:grid;grid-template-columns:1.1fr 1fr;gap:24px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
-    h1{font-size:20px;margin:0 0 6px}
-    h2{font-size:16px;margin:0 0 10px}
-    label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
-    input,select,textarea{
-      width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px; font-size:14px; background:#fff;
-    }
-    textarea{min-height:84px; resize:vertical}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .row3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px}
-    .btn{
-      display:inline-flex;align-items:center;gap:8px;
-      padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;cursor:pointer;font-weight:600;
-    }
-    .btn.primary{background:var(--primary);color:#fff;border-color:#000}
-    .btn.ghost{background:#fff}
-    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
-    .muted{color:var(--muted);font-size:12px}
-    .table{width:100%;border-collapse:collapse}
-    .table th,.table td{padding:10px;border-bottom:1px solid var(--line);font-size:14px;text-align:left;vertical-align:top}
-    .table th{color:#374151;font-weight:700;background:#fafafa}
-    .right{text-align:right}
-    .total{font-weight:800}
-    .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:6px 10px;border:1px solid var(--line);border-radius:999px}
-    .sticky-footer{position:sticky;bottom:0;background:transparent;padding:16px 0}
-    .footbar{display:flex;gap:10px;flex-wrap:wrap}
-    .logo-preview{display:flex;align-items:center;gap:12px}
-    .logo-preview img{max-height:46px;border-radius:8px;border:1px solid var(--line);background:#fff}
-    /* 发票预览纸张样式（A4 尺寸近似，供屏幕预览） */
-    #invoice{
-      background:#fff;color:#111; width:794px; /* ~A4 @96dpi */
-      margin:0 auto; border:1px solid var(--line); border-radius:12px; padding:28px;
-    }
-    .inv-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
-    .inv-meta{display:grid;gap:6px; font-size:13px}
-    .brand{font-size:18px;font-weight:800}
-    .divider{height:1px;background:var(--line);margin:16px 0}
-    .two{display:grid;grid-template-columns:1fr 1fr;gap:24px}
-    .bank{font-size:13px; white-space:pre-wrap; border:1px dashed var(--line); border-radius:10px; padding:10px}
-    .notes{white-space:pre-wrap; font-size:13px}
-    .badge{font-size:11px;color:#111;background:#f3f4f6;border:1px solid var(--line);display:inline-block;padding:4px 8px;border-radius:999px}
-    .sum{margin-left:auto;max-width:360px}
-    .sum table{width:100%}
-    .sum td{padding:6px 0;font-size:14px}
-    .sum td:last-child{text-align:right}
-    @media (max-width:980px){
-      .grid{grid-template-columns:1fr}
-      #invoice{width:100%}
+    /* 让其他输入框也更宽一点体验更好 */
+    input[type="text"], input[type="number"], input[type="date"] {
+      width: 85%;
+      font-size: 15px;
+      box-sizing: border-box;
     }
   </style>
 </head>
 <body>
-  <header class="wrap">
-    <div class="toolbar">
-      <button class="btn primary" id="savePdf">📄 下载 PDF</button>
-      <button class="btn ghost" id="saveData">💾 保存设置</button>
-      <button class="btn ghost" id="loadData">⤴️ 读取设置</button>
-      <button class="btn ghost" id="clearData">🧹 清空设置</button>
-      <span class="chip">提示：所有内容仅保存在你的浏览器（localStorage）</span>
-    </div>
-  </header>
-
-  <div class="wrap grid">
-    <!-- 左侧：表单 -->
-    <section class="card">
-      <h1>发票信息</h1>
-      <div class="row">
-        <div>
-          <label>发票号</label>
-          <input id="invNo" placeholder="例如 VE-2025-001" />
-        </div>
-        <div>
-          <label>发票日期</label>
-          <input id="invDate" type="date" />
-        </div>
-      </div>
-
-      <div class="row" style="margin-top:8px">
-        <div>
-          <label>币种</label>
-          <select id="currency">
-            <option value="USD">USD</option>
-            <option value="SGD">SGD</option>
-            <option value="CNY">CNY</option>
-            <option value="EUR">EUR</option>
-            <option value="JPY">JPY</option>
-          </select>
-        </div>
-        <div>
-          <label>税率（%）</label>
-          <input id="taxRate" type="number" step="0.01" value="0" />
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <h2>公司信息（开票方）</h2>
-      <div class="logo-preview">
-        <div>
-          <label>上传公司 Logo（PNG/JPG）</label>
-          <input id="logoFile" type="file" accept="image/*" />
-          <div class="muted">或粘贴 Logo 外链：</div>
-          <input id="logoUrl" placeholder="https://example.com/logo.png" />
-        </div>
-        <img id="logoImg" alt="Logo 预览" />
-      </div>
-      <label>公司名称</label>
-      <input id="fromName" value="Vanka Escapes Pte. Ltd." />
-      <label>公司地址</label>
-      <textarea id="fromAddr" placeholder="Address, City, Country, Postal Code"></textarea>
-      <label>公司联系方式</label>
-      <input id="fromContact" placeholder="Phone / Email / Website" />
-
-      <div class="divider"></div>
-
-      <h2>客户信息（收款方）</h2>
-      <label>客户名称</label>
-      <input id="toName" placeholder="Client / Company" />
-      <label>客户地址</label>
-      <textarea id="toAddr"></textarea>
-      <label>客户联系人与邮箱</label>
-      <input id="toContact" placeholder="Name / Email / Phone" />
-
-      <div class="divider"></div>
-
-      <h2>项目行</h2>
-      <table class="table" id="itemsTable">
+  <h1>在线发票生成器（带附件）</h1>
+  <div class="container">
+    <div class="form-area">
+      <h2>发票信息</h2>
+      <label>发票编号：<input id="invoiceNum" type="text"></label><br>
+      <label>日期：<input id="invoiceDate" type="date"></label><br>
+      <label>客户名称：<input id="customerName" type="text"></label><br>
+      <label>币种：<input id="currency" type="text" value="¥"></label><br>
+      <label>税率（%）：<input id="taxRate" type="number" min="0" max="100" value="0"></label><br>
+      <h2>项目</h2>
+      <table>
         <thead>
           <tr>
-            <th style="width:42%">项目 / 描述</th>
+            <th style="width:42%">描述</th>
             <th style="width:18%">单价</th>
             <th style="width:16%">数量</th>
             <th style="width:18%">小计</th>
@@ -157,376 +56,131 @@
         </thead>
         <tbody id="itemsBody"></tbody>
       </table>
-      <div style="margin-top:12px">
-        <button class="btn" id="addItem">➕ 添加一行</button>
+      <button onclick="addRow()">添加项目</button>
+      <h2>附件（支持多选）</h2>
+      <input type="file" id="attachments" multiple />
+      <ul id="attachmentList"></ul>
+      <div id="attachment-preview"></div>
+      <div class="actions">
+        <button onclick="downloadPDF()">下载发票 PDF（含图片附件）</button>
       </div>
-
-      <div class="divider"></div>
-
-      <h2>收款账户（显示在发票底部）</h2>
-      <textarea id="bank" placeholder="Bank Name: XXX Bank
-Account Name: Vanka Escapes Pte. Ltd.
-Account No / IBAN: XXXXX
-SWIFT / BIC: XXXXX
-Bank Address: XXXXX"></textarea>
-
-      <label>条款与备注（可多行）</label>
-      <textarea id="notes" placeholder="Payment due within 7 days. Thank you for your business."></textarea>
-    </section>
-
-    <!-- 右侧：即时预览（PDF 将以此为模板渲染） -->
-    <section class="card">
-      <h1>预览（A4）</h1>
-      <div id="invoice" aria-label="invoice-preview">
-        <div class="inv-head">
-          <div class="inv-meta">
-            <span class="brand">INVOICE 发票</span>
-            <span id="pInvNo" class="badge">编号：—</span>
-            <span id="pInvDate" class="badge">日期：—</span>
-          </div>
-          <div>
-            <img id="pLogo" alt="Logo" style="max-height:60px; border-radius:8px; border:1px solid var(--line)" />
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="two">
-          <div>
-            <strong>From（开票方）</strong><br/>
-            <div id="pFromName"></div>
-            <div id="pFromAddr" class="muted"></div>
-            <div id="pFromContact" class="muted"></div>
-          </div>
-          <div>
-            <strong>Bill To（客户）</strong><br/>
-            <div id="pToName"></div>
-            <div id="pToAddr" class="muted"></div>
-            <div id="pToContact" class="muted"></div>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <table class="table" id="pItems">
-          <thead>
-            <tr>
-              <th>项目 / 描述</th>
-              <th class="right">单价</th>
-              <th class="right">数量</th>
-              <th class="right">小计</th>
-            </tr>
-          </thead>
-          <tbody id="pItemsBody"></tbody>
-        </table>
-
-        <div class="two" style="margin-top:10px; align-items:flex-start">
-          <div>
-            <div><strong>备注 / Notes</strong></div>
-            <div id="pNotes" class="notes"></div>
-          </div>
-          <div class="sum">
-            <table>
-              <tr><td>币种</td><td id="pCurrency">—</td></tr>
-              <tr><td>小计 Subtotal</td><td id="pSubtotal">—</td></tr>
-              <tr><td>税率 Tax</td><td id="pTaxRate">—</td></tr>
-              <tr class="total"><td>合计 Total</td><td id="pTotal">—</td></tr>
-            </table>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div>
-          <strong>收款账户 Bank Details</strong>
-          <div id="pBank" class="bank"></div>
-        </div>
-
-        <div style="margin-top:18px;font-size:12px;color:#9ca3af">
-          此发票由 Vanka Escapes 在线发票生成器创建
-        </div>
-      </div>
-
-      <div class="sticky-footer">
-        <div class="footbar">
-          <span class="muted">预览即所见即所得；下载的 PDF 布局与此一致。</span>
-        </div>
-      </div>
-    </section>
+    </div>
+    <div class="preview-area" id="previewArea">
+      <!-- 发票预览会自动生成 -->
+    </div>
   </div>
-
-<script>
-(function(){
-  const $ = sel => document.querySelector(sel);
-  const $$ = sel => document.querySelectorAll(sel);
-
-  const state = {
-    logoDataUrl: "",
-    rows: []
-  };
-
-  // Utilities
-  function money(n){ 
-    const cur = $("#currency").value || "USD";
-    const f = Number.isFinite(n) ? n : 0;
-    return new Intl.NumberFormat('zh-CN', { minimumFractionDigits:2, maximumFractionDigits:2 }).format(f) + " " + cur;
-  }
-  function parseNum(v){ const n = parseFloat((v||"").toString().replace(/,/g,"")); return isNaN(n)?0:n; }
-  function todayISO(){ return new Date().toISOString().slice(0,10); }
-  function uid(){ return Math.random().toString(36).slice(2,9); }
-
-  // DOM refs for preview
-  const p = {
-    invNo: $("#pInvNo"),
-    invDate: $("#pInvDate"),
-    logo: $("#pLogo"),
-    fromName: $("#pFromName"),
-    fromAddr: $("#pFromAddr"),
-    fromContact: $("#pFromContact"),
-    toName: $("#pToName"),
-    toAddr: $("#pToAddr"),
-    toContact: $("#pToContact"),
-    itemsBody: $("#pItemsBody"),
-    currency: $("#pCurrency"),
-    subtotal: $("#pSubtotal"),
-    taxRate: $("#pTaxRate"),
-    total: $("#pTotal"),
-    bank: $("#pBank"),
-    notes: $("#pNotes"),
-  };
-
-  // Form refs
-  const f = {
-    invNo: $("#invNo"),
-    invDate: $("#invDate"),
-    currency: $("#currency"),
-    taxRate: $("#taxRate"),
-    logoFile: $("#logoFile"),
-    logoUrl: $("#logoUrl"),
-    logoImg: $("#logoImg"),
-    fromName: $("#fromName"),
-    fromAddr: $("#fromAddr"),
-    fromContact: $("#fromContact"),
-    toName: $("#toName"),
-    toAddr: $("#toAddr"),
-    toContact: $("#toContact"),
-    itemsBody: $("#itemsBody"),
-    addItem: $("#addItem"),
-    bank: $("#bank"),
-    notes: $("#notes"),
-    savePdf: $("#savePdf"),
-    saveData: $("#saveData"),
-    loadData: $("#loadData"),
-    clearData: $("#clearData"),
-  };
-
-  // Init defaults
-  function initDefaults(){
-    if(!f.invNo.value) f.invNo.value = `VE-${new Date().getFullYear()}-${String(Math.floor(Math.random()*999)+1).padStart(3,"0")}`;
-    if(!f.invDate.value) f.invDate.value = todayISO();
-    if(!f.fromAddr.value) f.fromAddr.value = "68 Circular Road, #02-01, Singapore 049422";
-    if(!f.fromContact.value) f.fromContact.value = "Tel: +65 xxxx xxxx · Email: info@vankaescapes.com · www.vankaescapes.com";
-    if(!f.bank.value) f.bank.value = `Bank Name: DBS Bank Ltd
-Account Name: Vanka Escapes Pte. Ltd.
-Account No / IBAN: 123-456789-0
-SWIFT/BIC: DBSSSGSG
-Bank Address: 12 Marina Boulevard, Singapore`;
-    addRow(); // at least one
-    refresh();
-  }
-
-  // Item rows
-  function addRow(data={}){
-    const id = data.id || uid();
-    const tr = document.createElement("tr");
-    tr.dataset.id = id;
-    tr.innerHTML = `
-      <td>
-        <input placeholder="项目名称 / 描述"
-               value="${data.desc||''}" />
-      </td>
-      <td class="right">
-        <input type="number" step="0.01" placeholder="单价" value="${data.unit||''}" />
-      </td>
-      <td class="right">
-        <input type="number" step="0.01" placeholder="数量" value="${data.qty||''}" />
-      </td>
-      <td class="right muted subtotal">—</td>
-      <td class="right">
-        <button class="btn" title="删除该行">✖</button>
-      </td>
-    `;
-    f.itemsBody.appendChild(tr);
-    tr.addEventListener("input", refresh);
-    tr.querySelector("button").addEventListener("click", ()=>{
-      tr.remove(); refresh();
-    });
-    return tr;
-  }
-
-  // Calc & preview render
-  function refresh(){
-    // Sync preview meta
-    p.invNo.textContent = "编号：" + (f.invNo.value || "—");
-    p.invDate.textContent = "日期：" + (f.invDate.value || "—");
-    p.fromName.textContent = f.fromName.value || "";
-    p.fromAddr.textContent = f.fromAddr.value || "";
-    p.fromContact.textContent = f.fromContact.value || "";
-    p.toName.textContent = f.toName.value || "";
-    p.toAddr.textContent = f.toAddr.value || "";
-    p.toContact.textContent = f.toContact.value || "";
-    p.currency.textContent = f.currency.value || "—";
-    p.bank.textContent = f.bank.value || "";
-    p.notes.textContent = f.notes.value || "";
-
-    // Logo
-    if(state.logoDataUrl){
-      p.logo.src = state.logoDataUrl;
-      f.logoImg.src = state.logoDataUrl;
-    }else if(f.logoUrl.value){
-      p.logo.src = f.logoUrl.value;
-      f.logoImg.src = f.logoUrl.value;
-    }else{
-      p.logo.removeAttribute("src");
-      f.logoImg.removeAttribute("src");
-    }
-
-    // Items
-    p.itemsBody.innerHTML = "";
-    let subtotal = 0;
-    [...f.itemsBody.querySelectorAll("tr")].forEach(tr=>{
-      const [descEl, unitEl, qtyEl] = tr.querySelectorAll("input");
-      const desc = descEl.value.trim();
-      const unit = parseNum(unitEl.value);
-      const qty = parseNum(qtyEl.value);
-      const line = unit * qty;
-      subtotal += line;
-
-      tr.querySelector(".subtotal").textContent = money(line);
-
-      const pr = document.createElement("tr");
-      pr.innerHTML = `
-        <td>${desc||'—'}</td>
-        <td class="right">${money(unit)}</td>
-        <td class="right">${qty || 0}</td>
-        <td class="right">${money(line)}</td>
+  <script>
+    // 项目行
+    function addRow(desc='', price='', qty='') {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><textarea class="desc" rows="4" style="width:98%;">${desc}</textarea></td>
+        <td><input class="price" type="number" min="0" value="${price}"></td>
+        <td><input class="qty" type="number" min="1" value="${qty}"></td>
+        <td class="subtotal">0</td>
+        <td><button onclick="this.closest('tr').remove(); refresh()">删除</button></td>
       `;
-      p.itemsBody.appendChild(pr);
-    });
-
-    const taxRate = parseNum(f.taxRate.value);
-    const taxAmount = subtotal * (taxRate/100);
-    const total = subtotal + taxAmount;
-
-    p.subtotal.textContent = money(subtotal);
-    p.taxRate.textContent = `${taxRate.toFixed(2)}% (${money(taxAmount)})`;
-    p.total.textContent = money(total);
-  }
-
-  // File logo upload -> dataURL
-  f.logoFile.addEventListener("change", (e)=>{
-    const file = e.target.files && e.target.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = () => { state.logoDataUrl = reader.result; refresh(); };
-    reader.readAsDataURL(file);
-  });
-  f.logoUrl.addEventListener("input", ()=>{ state.logoDataUrl = ""; refresh(); });
-
-  // Add item row
-  f.addItem.addEventListener("click", ()=> addRow());
-
-  // Bind inputs to refresh
-  ["invNo","invDate","currency","taxRate","fromName","fromAddr","fromContact","toName","toAddr","toContact","bank","notes"]
-    .forEach(id => f[id].addEventListener("input", refresh));
-
-  // Save / Load settings (localStorage)
-  function snapshot(){
-    const rows = [...f.itemsBody.querySelectorAll("tr")].map(tr=>{
-      const [d,u,q] = tr.querySelectorAll("input");
-      return {desc:d.value, unit:u.value, qty:q.value};
-    });
-    return {
-      invNo:f.invNo.value, invDate:f.invDate.value, currency:f.currency.value, taxRate:f.taxRate.value,
-      logoDataUrl: state.logoDataUrl, logoUrl: f.logoUrl.value,
-      fromName:f.fromName.value, fromAddr:f.fromAddr.value, fromContact:f.fromContact.value,
-      toName:f.toName.value, toAddr:f.toAddr.value, toContact:f.toContact.value,
-      bank:f.bank.value, notes:f.notes.value,
-      rows
-    };
-  }
-  function hydrate(data){
-    f.invNo.value = data.invNo||"";
-    f.invDate.value = data.invDate||"";
-    f.currency.value = data.currency||"USD";
-    f.taxRate.value = data.taxRate||"0";
-    state.logoDataUrl = data.logoDataUrl||"";
-    f.logoUrl.value = data.logoUrl||"";
-    f.fromName.value = data.fromName||"";
-    f.fromAddr.value = data.fromAddr||"";
-    f.fromContact.value = data.fromContact||"";
-    f.toName.value = data.toName||"";
-    f.toAddr.value = data.toAddr||"";
-    f.toContact.value = data.toContact||"";
-    f.bank.value = data.bank||"";
-    f.notes.value = data.notes||"";
-
-    f.itemsBody.innerHTML = "";
-    (data.rows||[]).forEach(r => addRow(r));
-    if((data.rows||[]).length===0) addRow();
-    refresh();
-  }
-  f.saveData.addEventListener("click", ()=>{
-    localStorage.setItem("vanka_invoice_v1", JSON.stringify(snapshot()));
-    alert("已保存到浏览器本地。");
-  });
-  f.loadData.addEventListener("click", ()=>{
-    const raw = localStorage.getItem("vanka_invoice_v1");
-    if(!raw){ alert("没有保存的数据"); return; }
-    hydrate(JSON.parse(raw));
-  });
-  f.clearData.addEventListener("click", ()=>{
-    if(confirm("确定清空本地保存的设置吗？")){ localStorage.removeItem("vanka_invoice_v1"); alert("已清空。"); }
-  });
-
-  // Export PDF (A4)
-  f.savePdf.addEventListener("click", async ()=>{
-    // 把预览区域渲染为图片，再塞入 PDF
-    const node = document.getElementById("invoice");
-    // 临时提升分辨率
-    const scale = 2;
-    const canvas = await html2canvas(node, { scale, backgroundColor:"#ffffff" });
-    const imgData = canvas.toDataURL("image/png");
-
-    const { jsPDF } = window.jspdf;
-    // A4 纵向: 210 x 297 mm -> jsPDF 单位 mm
-    const pdf = new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
-
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    // 图片以页面宽度为准，按比例缩放
-    const imgWidth = pageWidth - 20; // 左右边距 10mm
-    const imgHeight = canvas.height * imgWidth / canvas.width;
-
-    let y = 10;
-    pdf.addImage(imgData, "PNG", 10, y, imgWidth, imgHeight, undefined, "FAST");
-
-    // 如果高度超过一页，进行分页
-    let remaining = imgHeight - (pageHeight - 20);
-    while (remaining > 0) {
-      pdf.addPage();
-      y = 10;
-      pdf.addImage(imgData, "PNG", 10, y - (imgHeight - remaining), imgWidth, imgHeight, undefined, "FAST");
-      remaining -= (pageHeight - 20);
+      document.getElementById('itemsBody').appendChild(tr);
+      [...tr.querySelectorAll('input,textarea')].forEach(inp => inp.oninput = refresh);
+      refresh();
     }
+    addRow();
 
-    const filename = (f.invNo.value || "invoice") + ".pdf";
-    pdf.save(filename);
-  });
+    // 附件管理
+    let attachments = []; // { type, name, dataURL }
+    document.getElementById('attachments').addEventListener('change', function(e){
+      attachments = [];
+      document.getElementById('attachmentList').innerHTML = '';
+      document.getElementById('attachment-preview').innerHTML = '';
+      [...this.files].forEach(file => {
+        const li = document.createElement('li');
+        li.textContent = file.name;
+        document.getElementById('attachmentList').appendChild(li);
 
-  // Kickoff
-  initDefaults();
-})();
-</script>
+        if(file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = function(ev){
+            attachments.push({type:'image', name:file.name, dataURL:ev.target.result});
+            const img = document.createElement('img');
+            img.src = ev.target.result;
+            document.getElementById('attachment-preview').appendChild(img);
+            refresh();
+          };
+          reader.readAsDataURL(file);
+        } else {
+          attachments.push({type:'other', name:file.name});
+          refresh();
+        }
+      });
+    });
+
+    // 发票预览
+    function refresh() {
+      let html = `<h2>发票预览</h2>
+        <p>编号：${val('invoiceNum')}<br>
+        日期：${val('invoiceDate')}<br>
+        客户：${val('customerName')}</p>
+        <table><thead><tr><th>描述</th><th>单价</th><th>数量</th><th>小计</th></tr></thead><tbody>`;
+      let total = 0;
+      document.querySelectorAll('#itemsBody tr').forEach(tr => {
+        const desc = tr.querySelector('.desc').value;
+        const price = parseFloat(tr.querySelector('.price').value) || 0;
+        const qty = parseInt(tr.querySelector('.qty').value) || 0;
+        const subtotal = price * qty;
+        tr.querySelector('.subtotal').textContent = subtotal.toFixed(2);
+        total += subtotal;
+        html += `<tr><td>${desc.replace(/\n/g,'<br>')}</td><td>${price.toFixed(2)}</td><td>${qty}</td><td>${subtotal.toFixed(2)}</td></tr>`;
+      });
+      html += `</tbody></table>`;
+      const tax = total * (parseFloat(val('taxRate'))||0)/100;
+      html += `<p>合计：${val('currency')}${total.toFixed(2)}<br>税费：${val('currency')}${tax.toFixed(2)}<br><b>总计：${val('currency')}${(total+tax).toFixed(2)}</b></p>`;
+      // 附件预览
+      if(attachments.length) {
+        html += `<h3>附件</h3><ul>`;
+        attachments.forEach(att => {
+          if(att.type === 'image') {
+            html += `<li>图片：${att.name}</li>`;
+          } else {
+            html += `<li>文件：${att.name}</li>`;
+          }
+        });
+        html += `</ul>`;
+      }
+      document.getElementById('previewArea').innerHTML = html;
+    }
+    function val(id){ return document.getElementById(id).value||''; }
+    document.querySelectorAll('input').forEach(inp => inp.oninput = refresh);
+
+    // PDF 生成（主内容+图片附件）
+    async function downloadPDF() {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ unit:'pt', format:'a4' });
+      // 发票主内容截图
+      const preview = document.getElementById('previewArea');
+      const canvas = await html2canvas(preview, { scale:2 });
+      const imgData = canvas.toDataURL('image/png');
+      pdf.addImage(imgData, 'PNG', 24, 24, 548, 0); // A4宽度 595pt
+      let y = canvas.height * 0.75 + 40; // 下移一点
+
+      // 插入所有图片附件
+      let imgCount = 0;
+      for(const att of attachments) {
+        if(att.type === 'image') {
+          if(imgCount === 0) {
+            pdf.addPage();
+            y = 40;
+            pdf.setFontSize(16);
+            pdf.text('附件图片', 40, y);
+            y += 24;
+          }
+          pdf.addImage(att.dataURL, 'PNG', 40, y, 120, 90); // 每张缩小显示
+          pdf.text(att.name, 170, y+50);
+          y += 100;
+          imgCount++;
+        }
+      }
+      pdf.save("invoice.pdf");
+    }
+  </script>
 </body>
 </html>
